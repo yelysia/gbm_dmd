@@ -1,3 +1,4 @@
+Trying prices snapshots DMD...
 svdrank:  5
 dmd_fitting_window_length:  100
 RMSE_training: 8.590929738183018, RMSE_test: 41.31687789442947
