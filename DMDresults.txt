@@ -1,0 +1,65 @@
+svdrank:  5
+dmd_fitting_window_length:  100
+RMSE_training: 8.590929738183018, RMSE_test: 41.31687789442947
+MAE_training: 3.649058790793484, MAE_test: 17.25366312593863
+Trying returns snapshots DMD...
+svdrank:  5
+dmd_fitting_window_length:  100
+RMSE_training: 0.021545964711090288, RMSE_test: 0.02173259519153855
+MAE_training: 0.013377049338582908, MAE_test: 0.013593850954247822
+-------------------------------------------
+Trying prices snapshots DMD...
+svdrank:  5
+dmd_fitting_window_length:  600
+RMSE_training: 13.723879632809211, RMSE_test: 44.118236393508035
+MAE_training: 6.949305196207425, MAE_test: 21.3337211777531
+Trying returns snapshots DMD...
+svdrank:  5
+dmd_fitting_window_length:  600
+RMSE_training: 0.022510828765800298, RMSE_test: 0.02138004832323893
+MAE_training: 0.015001124415227786, MAE_test: 0.013213596433188183
+-------------------------------------------
+Trying prices snapshots DMD...
+svdrank:  5
+dmd_fitting_window_length:  1911
+RMSE_training: 17.206386038078627, RMSE_test: 46.63462440279085
+MAE_training: 9.220442701601604, MAE_test: 23.618148815158275
+Trying returns snapshots DMD...
+svdrank:  5
+dmd_fitting_window_length:  1911
+RMSE_training: 0.023671682392697655, RMSE_test: 0.021577753565259223
+MAE_training: 0.015042008518680174, MAE_test: 0.013418527479615198
+-------------------------------------------
+Trying prices snapshots DMD...
+svdrank:  20
+dmd_fitting_window_length:  100
+RMSE_training: 6.02972793671877, RMSE_test: 40.71387512345021
+MAE_training: 1.9770584911428049, MAE_test: 16.416719911008535
+Trying returns snapshots DMD...
+svdrank:  20
+dmd_fitting_window_length:  100
+RMSE_training: 0.01936361652771981, RMSE_test: 0.022711024109884806
+MAE_training: 0.012414183736595436, MAE_test: 0.014444367648540188
+-------------------------------------------
+Trying prices snapshots DMD...
+svdrank:  20
+dmd_fitting_window_length:  600
+RMSE_training: 7.247249011834549, RMSE_test: 29.773096137078774
+MAE_training: 3.3020931755264322, MAE_test: 14.889107959542924
+Trying returns snapshots DMD...
+svdrank:  20
+dmd_fitting_window_length:  600
+RMSE_training: 0.022168319426637703, RMSE_test: 0.021683691638924942
+MAE_training: 0.014881920915323657, MAE_test: 0.013550037763723821
+-------------------------------------------
+Trying prices snapshots DMD...
+svdrank:  20
+dmd_fitting_window_length:  1911
+RMSE_training: 7.95968968979334, RMSE_test: 32.76722568842697
+MAE_training: 4.284876439230944, MAE_test: 17.437177225168565
+Trying returns snapshots DMD...
+svdrank:  20
+dmd_fitting_window_length:  1911
+RMSE_training: 0.023401509910248385, RMSE_test: 0.02184960117404092
+MAE_training: 0.015032012856784408, MAE_test: 0.013629733758704283
+-------------------------------------------

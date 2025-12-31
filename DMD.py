@@ -92,43 +92,6 @@ def train_test_split(X, train_percentage=0.95):
     X_test = X[:, T_train:]
     return X_train, X_test, T_train, T_test
 
-# def train_test_windows(X, T_window):
-#     '''
-#     divide entire time series into equalsized windows (except the last window which may not be of equal size)
-#     where each window alternates between being assigned as a training and test
-
-#     X : (N, T_tot) numpy array
-#     T_window : int, desired length of each window (the last window of testing may be shorter than T_window)
-
-#     returns:
-#         X_train_windows : list of (N, T_train) numpy arrays
-#         X_test_windows : list of (N, T_test) numpy arrays
-#         T_train_windows : (len:num_windows) list of ints (lengths of the corresponding training windows)
-#         T_test_windows : (len:num_windows) list of ints (lengths of the corresponding test window)
-#     '''
-#     # LOGIC HERE IS NOT RIGHT; NEED TO FIX
-#     N, T_tot = X.shape
-#     num_full_windows = T_tot // T_window
-#     last_additional_window_length = T_tot - num_full_windows * T_window
-#     X_train_windows = []
-#     X_test_windows = []
-#     T_train_windows = []
-#     T_test_windows = []
-#     for i in range(num_full_windows-1):
-#         X_train_windows.append(X[:, i*T_window:(i+1)*T_window])
-#         X_test_windows.append(X[:, (i+1)*T_window:(i+2)*T_window])
-#         T_train_windows.append(T_window)
-#         T_test_windows.append(T_window)
-#     # add the last guaranteed full window which would be a train set
-#     X_train_windows.append(X[:, (num_full_windows-1)*T_window:])
-#     T_train_windows.append(T_window)
-#     # deal with remainder if nonzero, which would be the final test set
-#     if last_additional_window_length != 0:
-#         X_test_windows.append(X[:, -last_additional_window_length:])
-#         T_test_windows.append(last_additional_window_length)
-
-#     return X_train_windows, X_test_windows, T_train_windows, T_test_windows
-
 
 ######### manual dmd algorithm implementation ###############################
 
@@ -154,7 +117,6 @@ def DMD_manual(snapshots, svd_rank):
     U, S, VT = np.linalg.svd(X, full_matrices=True)
     # U and the Hermitian transpose of VT are 2D arrays with orthonormal columns and S is a 1D array of Y's singular values
     # when X has shape (N, M-1), if full_matrices=True, U and VT have the shapes (N, N) and (M-1, M-1)
-
 
     # compute the truncated SVD of X: get the first r columns of U, the upperleft rxr block, the first r rows of VT
     U_trunc = U[:, :svd_rank]
@@ -184,9 +146,9 @@ def DMD_manual(snapshots, svd_rank):
     Lambda, W = np.linalg.eig(Atilde)
     # column W[:,i] is the eigenvector w corresponding to the eigenvalue Lambda[i].
 
-    # check if there are complex values in Lambda
-    if np.any(np.iscomplex(Lambda)):
-        print("There are complex values in Lambda")
+    # # check if there are complex values in Lambda
+    # if np.any(np.iscomplex(Lambda)):
+    #     print("There are complex values in Lambda")
     
     if np.any(np.iscomplex(Abar)):
         print("There are complex values in Abar")
@@ -207,6 +169,101 @@ def DMD_manual(snapshots, svd_rank):
     # column DMD_modes[:,i] is the dynamic mode corresponding to the eigenvalue Lambda[i].
     return Abar, Lambda, DMD_modes
 
+
+
+def DMD_fit_predict_evaluate(all_train_snapshots, test_snapshots, chosen_rank, dmd_fitting_window_length, prices_as_state=True, num_stocks_plot=2, plot_DMD_modes_summary=False):
+    """
+    all_train_snapshots: (N, T_train_all) numpy array, total training set available
+        (only [T_train_all - dmd_fitting_window_length] number of these snapshots are used for actual training)
+    
+    test_snapshots: (N, T_test) numpy array, test set
+    
+    chosen_rank: int, the number of singular values to keep in the truncated SVD of the actual training snapshots
+    
+    dmd_fitting_window_length: int, the number of snapshots to use for the actual training
+    
+    prices_as_state: bool, whether to use prices as the state variable for the DMD model; if false, indicates returns are used
+    
+    num_stocks_plot: int, the number of stocks to show in the test predictions plots
+    
+    plot_DMD_modes_summary: bool, whether to plot the summary of the key spatiotemporal modes using PyDMD
+    """
+    if prices_as_state:
+        snapshots_quantity_name= 'prices'
+    else:
+        snapshots_quantity_name = 'ret'
+
+    N, T_train_all = all_train_snapshots.shape
+    _, T_test = test_snapshots.shape # number of snapshots in the test set
+
+    T_train = T_train_all - dmd_fitting_window_length # number of snapshots used for actual training
+
+    train_snapshots = all_train_snapshots[:, -dmd_fitting_window_length:] # set used for actual training
+
+    if plot_DMD_modes_summary:
+        # Build an exact DMD model with <chosen_rank> spatiotemporal modes
+        pydmd_model = DMD(svd_rank=chosen_rank, exact=True)
+        # Fit the DMD model
+        pydmd_model.fit(train_snapshots)
+        # Plot a summary of the key spatiotemporal modes
+        plot_summary(pydmd_model, figsize=(12,9), title_fontsize=8, label_fontsize=6, max_sval_plot=50)
+    
+    # compute the DMD modes manually
+    Abar, Lambda, DMD_modes = DMD_manual(train_snapshots, chosen_rank)
+
+    # create input snapshots matrix for test set
+    test_input_snapshots = test_snapshots[:, :-1] # shape: (N, T_test-1)
+    # create input snapshots matrix for train set
+    train_input_snapshots = train_snapshots[:, :-1] # shape: (N, T_train-1)
+
+    # make predictions on test set
+    # one_step_ahead_predicted_test_snapshots = pydmd_model.predict(test_input_snapshots)
+    test_one_step_ahead_predicted_snapshots = Abar @ test_input_snapshots
+    # make predictions on train set
+    train_one_step_ahead_predicted_snapshots = Abar @ train_input_snapshots
+
+    # check if there are complex valued predictions
+    if np.any(np.iscomplex(test_one_step_ahead_predicted_snapshots)):
+        print("There are complex valued predictions for test set")
+    if np.any(np.iscomplex(train_one_step_ahead_predicted_snapshots)):
+        print("There are complex valued predictions for train set")
+
+    if num_stocks_plot > 0:
+        # concatenate the first test snapshot to the beginning of the predicted test snapshots 
+        test_predictions_with_inital = np.concatenate((test_snapshots[:,0:1], test_one_step_ahead_predicted_snapshots), axis=1) # shape: (N, T_test), only for plotting purposes
+
+        # plot the predicted test snapshots
+        fig, ax = plt.subplots()
+        for i in range(num_stocks_plot):
+            ax.plot(np.arange(T_test), test_predictions_with_inital.T[:,i], label=f'{tickers[i]} predictions') # predictions
+            ax.plot(np.arange(T_test), test_snapshots.T[:,i], label=f'{tickers[i]} actual') # actual
+        ax.set_title(f'DMD-Predicted {snapshots_quantity_name} on Test-set; First {num_stocks_plot} stocks; SVD rank = {chosen_rank}')
+        ax.set_xlabel('Trading Day')
+        if prices_as_state:
+            ax.set_ylabel('Price')
+        else:
+            ax.set_ylabel('Return')
+        ax.legend()
+        fig.savefig(f'figures/ExactDMD_{snapshots_quantity_name}_svdrank{chosen_rank}_{portfolio_name}_testsetpredictions_fittingwindowlen{dmd_fitting_window_length}.png', dpi=300)
+        plt.close(fig)
+
+    print("svdrank: ", chosen_rank)
+    print("dmd_fitting_window_length: ", dmd_fitting_window_length)
+
+    # compute goodness of fit metrics on the training data and loss against the test data
+    # compute mean squared error
+    MSE_training = np.mean((train_one_step_ahead_predicted_snapshots - train_snapshots[:,1:])**2)
+    MSE_test = np.mean((test_one_step_ahead_predicted_snapshots - test_snapshots[:,1:])**2)
+    RMSE_training = np.sqrt(MSE_training)
+    RMSE_test = np.sqrt(MSE_test)
+    print(f'RMSE_training: {RMSE_training}, RMSE_test: {RMSE_test}')
+
+    # mean absolute error (MAE)
+    MAE_training = np.mean(np.abs(train_one_step_ahead_predicted_snapshots - train_snapshots[:,1:]))
+    MAE_test = np.mean(np.abs(test_one_step_ahead_predicted_snapshots - test_snapshots[:,1:]))
+    print(f'MAE_training: {MAE_training}, MAE_test: {MAE_test}')
+
+                
 
 ################################################ MAIN SCRIPT ####################################################
 
@@ -242,138 +299,19 @@ P_train, P_test, T_train_P, T_test_P = train_test_split(P)
 logP_train, logP_test, T_train_logP, T_test_logP = train_test_split(logP)
 
 
-###### SCRIPT SETTINGS #######################################################
+############# RUN DMD ALGORITHM #####################
 
-chosen_rank = 20
-n = 2
+num_stocks_plot = 0 # or 2
 
-# use only last 100 points in training data
-#dmd_fitting_window_length = 600
+chosen_rank_list = [5, 20]
+dmd_fitting_window_length_list = [100, 600, P_train.shape[1]] # use only last 100 or 600 points in training data or use all training data
 
-# # or use all training data
-_, dmd_fitting_window_length = P_train.shape
-
-
-
-######### try prices snapshots DMD #########################################################
-
-
-#singularvals_prices_filename = f'singularvals_{adjPrices_file_path.split('.npy')[0]}.png' 
-#U_prices, S_prices, VT_prices, trunc_r_prices, P_denosied_if_noised = SVD_and_truncation_rank(P, singularvals_prices_filename)
-#print("trunc_r_prices: ", trunc_r_prices)
-
-# Build an exact DMD model with <chosen_rank> spatiotemporal modes
-dmd_prices = DMD(svd_rank=chosen_rank, exact=True)
-# Fit the DMD model
-assert P_train[:,-dmd_fitting_window_length:].shape == (N, dmd_fitting_window_length), "Error: shape of P_train[:,-dmd_fitting_window_length:] is not (N, dmd_fitting_window_length)"
-dmd_prices.fit(P_train[:,-dmd_fitting_window_length:])
-# Plot a summary of the key spatiotemporal modes
-plot_summary(dmd_prices, figsize=(12,9), title_fontsize=8, label_fontsize=6, max_sval_plot=50)
-
-# compute the DMD modes manually
-Abar_prices, Lambda_prices, DMD_modes_prices = DMD_manual(P_train[:,-dmd_fitting_window_length:], chosen_rank)
-
-# create input snapshots matrix for test set
-P_test_input = P_test[:, :-1]
-# concatenate the final column of P_train to the leftmost column position in P_test_input
-P_test_input = np.concatenate((P_train[:,-1:], P_test_input), axis=1)
-
-# Make predictions on test set
-# P_predicted = dmd_prices.predict(P_test) # this is incorrect!
-# P_predicted = dmd_prices.predict(P_test_input)
-
-
-# make test predictions
-P_predicted = Abar_prices @ P_test_input
-
-# check if there are complex values in P_predicted
-if np.any(np.iscomplex(P_predicted)):
-    print("There are complex values in P_predicted")
-
-# plot the predicted test prices
-fig, ax = plt.subplots()
-for i in range(n):
-    ax.plot(np.arange(T_test_P), P_predicted.T[:,i], label=f'{tickers[i]} predictions') # predictions
-    ax.plot(np.arange(T_test_P), P_test.T[:,i], label=f'{tickers[i]} actual') # actual
-ax.set_title(f'DMD-Predicted Prices on Test-set; First {n} stocks; SVD rank = {chosen_rank}')
-ax.set_xlabel('Trading Day')
-ax.set_ylabel('Price')
-ax.legend()
-fig.savefig(f'figures/ExactDMD_prices_svdrank{chosen_rank}_{portfolio_name}_testsetpredictions_fittingwindowlen{dmd_fitting_window_length}.png', dpi=300)
-plt.close(fig)
-
-# compute goodness of fit metrics on the training data and loss of the simulation against the test data
-# compute mean squared error
-MSE_training = np.mean((P_predicted - P_test)**2)
-MSE_test = np.mean((P_predicted - P_test)**2)
-RMSE_training = np.sqrt(MSE_training)
-RMSE_test = np.sqrt(MSE_test)
-print(f'RMSE_training: {RMSE_training}, RMSE_test: {RMSE_test}')
-
-# mean absolute error (MAE)
-MAE_training = np.mean(np.abs(P_predicted - P_test))
-MAE_test = np.mean(np.abs(P_predicted - P_test))
-print(f'MAE_training: {MAE_training}, MAE_test: {MAE_test}')
-
-
-
-
-# # ######### try returns snapshots DMD #########################################################
-
-
-#singularvals_returns_filename = f'singularvals_{returns_file_path.split('.npy')[0]}.png' 
-#U_returns, S_returns, VT_returns, trunc_r_returns, Y_denosied_if_noised = SVD_and_truncation_rank(Y, singularvals_returns_filename)
-#print("trunc_r_returns: ", trunc_r_returns)
-
-# Build an exact DMD model with <chosen_rank> spatiotemporal modes
-dmd_returns = DMD(svd_rank=chosen_rank, exact=True)
-# Fit the DMD model
-dmd_returns.fit(Y_train[:,-dmd_fitting_window_length:])
-# Plot a summary of the key spatiotemporal modes
-plot_summary(dmd_returns, figsize=(12,9), title_fontsize=8, label_fontsize=6, max_sval_plot=50)
-
-# compute the DMD modes manually
-Abar_rets, Lambda_rets, DMD_modes_rets = DMD_manual(Y_train[:,-dmd_fitting_window_length:], chosen_rank)
-
-# create input snapshots matrix for test set
-Y_test_input = Y_test[:, :-1]
-# concatenate the final column of Y_train to the leftmost column position in Y_test_input
-Y_test_input = np.concatenate((Y_train[:,-1:], Y_test_input), axis=1)
-
-# Make predictions on test set
-# Y_predicted = dmd_returns.predict(Y_test) # this is incorrect!
-# Y_predicted = dmd_returns.predict(Y_test_input)
-
-# make test predictions
-Y_predicted = Abar_rets @ Y_test_input
-
-
-# check if there are complex values in Y_predicted
-if np.any(np.iscomplex(Y_predicted)):
-    print("There are complex values in Y_predicted")
-
-
-# plot the predicted test returns
-fig, ax = plt.subplots()
-for i in range(n):
-    ax.plot(np.arange(T_test_Y), Y_predicted.T[:,i], label=f'{tickers[i]} predictions') # predictions
-    ax.plot(np.arange(T_test_Y), Y_test.T[:,i], label=f'{tickers[i]} actual') # actual
-ax.set_title(f'DMD-Predicted Returns on Test-set; First {n} stocks; SVD rank = {chosen_rank}')
-ax.set_xlabel('Trading Day')
-ax.set_ylabel('Return')
-ax.legend()
-fig.savefig(f'figures/ExactDMD_ret_svdrank{chosen_rank}_{portfolio_name}_testsetpredictions_fittingwindowlen{dmd_fitting_window_length}.png', dpi=300)
-plt.close(fig)
-
-# compute goodness of fit metrics on the training data and loss of the simulation against the test data
-# compute mean squared error
-MSE_training = np.mean((Y_predicted - Y_test)**2)
-MSE_test = np.mean((Y_predicted - Y_test)**2)
-# root mean squared error (RMSE)
-RMSE_training = np.sqrt(MSE_training)
-RMSE_test = np.sqrt(MSE_test)
-print(f'RMSE_training: {RMSE_training}, RMSE_test: {RMSE_test}')
-# mean absolute error (MAE)
-MAE_training = np.mean(np.abs(Y_predicted - Y_test))
-MAE_test = np.mean(np.abs(Y_predicted - Y_test))
-print(f'MAE_training: {MAE_training}, MAE_test: {MAE_test}')
+for chosen_rank in chosen_rank_list:
+    for dmd_fitting_window_length in dmd_fitting_window_length_list:
+        # try prices snapshots 
+        print("Trying prices snapshots DMD...")
+        DMD_fit_predict_evaluate(P_train, P_test, chosen_rank, dmd_fitting_window_length, prices_as_state=True, num_stocks_plot=num_stocks_plot, plot_DMD_modes_summary=False)
+        # try returns snapshots 
+        print("Trying returns snapshots DMD...")
+        DMD_fit_predict_evaluate(Y_train, Y_test, chosen_rank, dmd_fitting_window_length, prices_as_state=False, num_stocks_plot=num_stocks_plot, plot_DMD_modes_summary=False)
+        print("-------------------------------------------")
