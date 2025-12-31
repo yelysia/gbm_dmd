@@ -1,0 +1,20 @@
+Fitting window length:  600
+avg_RMSE_ret_train: 0.03191556750582111
+avg_MAE_ret_train: 0.023005753418499503
+avg_RMSE_ret_test: 0.0311764897014212
+avg_MAE_ret_test: 0.02198337628797053
+avg_RMSE_P_train: 219.08771936285842
+avg_MAE_P_train: 85.60629218141464
+avg_RMSE_P_test: 88.98521112221569
+avg_MAE_P_test: 26.94391758677055
+-------------------------------------------
+Fitting window length:  1911
+avg_RMSE_ret_train: 0.03368689347985264
+avg_MAE_ret_train: 0.024138107270294314
+avg_RMSE_ret_test: 0.03230541738285969
+avg_MAE_ret_test: 0.023199949863482953
+avg_RMSE_P_train: 389.03834167381876
+avg_MAE_P_train: 92.00421475176599
+avg_RMSE_P_test: 96.44284429239434
+avg_MAE_P_test: 28.560021661368772
+-------------------------------------------

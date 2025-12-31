@@ -174,7 +174,7 @@ def DMD_manual(snapshots, svd_rank):
 def DMD_fit_predict_evaluate(all_train_snapshots, test_snapshots, chosen_rank, dmd_fitting_window_length, prices_as_state=True, num_stocks_plot=2, plot_DMD_modes_summary=False):
     """
     all_train_snapshots: (N, T_train_all) numpy array, total training set available
-        (only [T_train_all - dmd_fitting_window_length] number of these snapshots are used for actual training)
+        (only last [dmd_fitting_window_length] of these snapshots are used for actual training)
     
     test_snapshots: (N, T_test) numpy array, test set
     
@@ -196,7 +196,7 @@ def DMD_fit_predict_evaluate(all_train_snapshots, test_snapshots, chosen_rank, d
     N, T_train_all = all_train_snapshots.shape
     _, T_test = test_snapshots.shape # number of snapshots in the test set
 
-    T_train = T_train_all - dmd_fitting_window_length # number of snapshots used for actual training
+    T_train = dmd_fitting_window_length # number of snapshots used for actual training
 
     train_snapshots = all_train_snapshots[:, -dmd_fitting_window_length:] # set used for actual training
 
@@ -262,7 +262,6 @@ def DMD_fit_predict_evaluate(all_train_snapshots, test_snapshots, chosen_rank, d
     MAE_training = np.mean(np.abs(train_one_step_ahead_predicted_snapshots - train_snapshots[:,1:]))
     MAE_test = np.mean(np.abs(test_one_step_ahead_predicted_snapshots - test_snapshots[:,1:]))
     print(f'MAE_training: {MAE_training}, MAE_test: {MAE_test}')
-
                 
 
 ################################################ MAIN SCRIPT ####################################################
@@ -301,17 +300,15 @@ logP_train, logP_test, T_train_logP, T_test_logP = train_test_split(logP)
 
 ############# RUN DMD ALGORITHM #####################
 
-num_stocks_plot = 0 # or 2
-
 chosen_rank_list = [5, 20]
-dmd_fitting_window_length_list = [100, 600, P_train.shape[1]] # use only last 100 or 600 points in training data or use all training data
+dmd_fitting_window_lengths_list = [100, 600, P_train.shape[1]] # use only last 100 or 600 points in training data or use all training data
 
 for chosen_rank in chosen_rank_list:
-    for dmd_fitting_window_length in dmd_fitting_window_length_list:
+    for dmd_fitting_window_length in dmd_fitting_window_lengths_list:
         # try prices snapshots 
         print("Trying prices snapshots DMD...")
-        DMD_fit_predict_evaluate(P_train, P_test, chosen_rank, dmd_fitting_window_length, prices_as_state=True, num_stocks_plot=num_stocks_plot, plot_DMD_modes_summary=False)
+        DMD_fit_predict_evaluate(P_train, P_test, chosen_rank, dmd_fitting_window_length, prices_as_state=True, num_stocks_plot=2, plot_DMD_modes_summary=False)
         # try returns snapshots 
         print("Trying returns snapshots DMD...")
-        DMD_fit_predict_evaluate(Y_train, Y_test, chosen_rank, dmd_fitting_window_length, prices_as_state=False, num_stocks_plot=num_stocks_plot, plot_DMD_modes_summary=False)
+        DMD_fit_predict_evaluate(Y_train, Y_test, chosen_rank, dmd_fitting_window_length, prices_as_state=False, num_stocks_plot=2, plot_DMD_modes_summary=False)
         print("-------------------------------------------")
