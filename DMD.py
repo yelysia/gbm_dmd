@@ -312,3 +312,17 @@ for chosen_rank in chosen_rank_list:
         print("Trying returns snapshots DMD...")
         DMD_fit_predict_evaluate(Y_train, Y_test, chosen_rank, dmd_fitting_window_length, prices_as_state=False, num_stocks_plot=2, plot_DMD_modes_summary=False)
         print("-------------------------------------------")
+
+
+# # Build an exact DMD model with <chosen_rank> spatiotemporal modes
+# pydmd_model = DMD(svd_rank=5, exact=True)
+# # Fit the DMD model
+# pydmd_model.fit(P_test)
+# # Plot a summary of the key spatiotemporal modes
+# plot_summary(pydmd_model, figsize=(12,9), title_fontsize=8, label_fontsize=6, max_sval_plot=50)
+
+# pydmd_model = DMD(svd_rank=5, exact=True)
+# # Fit the DMD model
+# pydmd_model.fit(Y_test)
+# # Plot a summary of the key spatiotemporal modes
+# plot_summary(pydmd_model, figsize=(12,9), title_fontsize=8, label_fontsize=6, max_sval_plot=50)
